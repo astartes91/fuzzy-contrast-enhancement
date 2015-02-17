@@ -126,6 +126,9 @@ namespace FuzzyContrastEnhancement
                     int color = (int) (max - (fuzzyDenominator * ((Math.Pow(membershipValuesMatrix[i, j], 
                         (-1/fuzzyExponent))) - 1)));
 
+                    /*int color = (int)(fuzzyDenominator + max - (fuzzyDenominator * (Math.Pow(membershipValuesMatrix[i, j],
+                        (-1 / fuzzyExponent)))));*/
+
                     //if (color < 0) color *= -1;
 
                     Color newColor = Color.FromArgb(color, color, color);
