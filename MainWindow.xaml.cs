@@ -40,11 +40,134 @@ namespace FuzzyContrastEnhancement
             BitmapImage sourceBitmapImage = new BitmapImage(new Uri(dialog.FileName));
             SourceImage.Source = sourceBitmapImage;
 
-            BitmapImage grayBitmapImage = GetGrayscaleImage(sourceBitmapImage);
+            Bitmap grayScaleBitmap = null;
+            BitmapImage grayBitmapImage = GetGrayscaleImage(sourceBitmapImage, out grayScaleBitmap);
             GrayImage.Source = grayBitmapImage;
+
+            EnhancedImage.Source = GetEnhancedImage(grayScaleBitmap);
         }
 
-        private BitmapImage GetGrayscaleImage(BitmapImage source)
+        private BitmapImage GetEnhancedImage(Bitmap grayscaleBitmap)
+        {
+            int max = int.MinValue, min = int.MaxValue;
+            int width = grayscaleBitmap.Width, height = grayscaleBitmap.Height;
+            for (int i = 0; i < width; i++)
+            {
+                for (int j = 0; j < height; j++)
+                {
+                    Color originalColor = grayscaleBitmap.GetPixel(i, j);
+
+                    int redValue = originalColor.R;
+
+                    if (redValue > max)
+                    {
+                        max = redValue;
+                    }
+                    if (redValue < min)
+                    {
+                        min = redValue;
+                    }
+                }
+            }
+
+            double fuzzyExponent = FuzzyExponentSlider.Value;
+            double crossover = min + ((max-min+1)/2);
+            double fuzzyDenominator = (max - crossover) / (Math.Pow(2, (1 / fuzzyExponent)) - 1);
+            //double fuzzyDenominator = (max - crossover) / (Math.Pow(0.5, (1 / fuzzyExponent)));
+            //double fuzzyDenominator = (max - crossover)/(Math.Pow(0.5, (-1/fuzzyExponent)) - 1);
+            //double fuzzyDenominator = (max - crossover) / (Math.Exp(-1 * Math.Log(0.5) / fuzzyExponent) - 1);
+
+            /********************************** Fuzzification **************************************/
+            double[,] membershipValuesMatrix = new double[width, height];
+            //double[,] fuzzyDenominatorValuesMatrix = new double[width, height];
+            for (int i = 0; i < width; i++)
+            {
+                for (int j = 0; j < height; j++)
+                {
+                    Color originalColor = grayscaleBitmap.GetPixel(i, j);
+
+                    int redValue = originalColor.R;
+
+                    /*fuzzyDenominatorValuesMatrix[i, j] = (max - redValue) / (Math.Pow(2, (1 / fuzzyExponent)) - 1);
+                    fuzzyDenominator = fuzzyDenominatorValuesMatrix[i, j];*/
+
+                    /*membershipValuesMatrix[i, j] = 1/(Math.Pow((1 + ((max - redValue)/fuzzyDenominator)), 
+                        fuzzyExponent));*/
+                    membershipValuesMatrix[i, j] = (Math.Pow((1 + ((max - redValue) / fuzzyDenominator)),
+                        -1 * fuzzyExponent));
+                }
+            }
+            /********************************** End of Fuzzification *********************************/
+
+            /*************************************** Intensification *****************************************/
+            for (int i = 0; i < width; i++)
+            {
+                for (int j = 0; j < height; j++)
+                {
+                    if (membershipValuesMatrix[i, j] <= 0.5)
+                    {
+                        membershipValuesMatrix[i, j] = 2 * Math.Pow(membershipValuesMatrix[i, j], 2);
+                    }
+                    else
+                    {
+                        membershipValuesMatrix[i, j] = 1 - 2 * (Math.Pow(1 - membershipValuesMatrix[i, j], 2));
+                    }
+                }
+            }
+            /************************************* End of Intensification ************************************/
+
+            /*********************************** Defuzzification **************************************/
+            Bitmap enhancedBitmap = new Bitmap(width, height);
+            for (int i = 0; i < width; i++)
+            {
+                for (int j = 0; j < height; j++)
+                {
+                    //fuzzyDenominator = fuzzyDenominatorValuesMatrix[i, j];
+                    int color = (int) (max - (fuzzyDenominator * ((Math.Pow(membershipValuesMatrix[i, j], 
+                        (-1/fuzzyExponent))) - 1)));
+
+                    //if (color < 0) color *= -1;
+
+                    Color newColor = Color.FromArgb(color, color, color);
+
+                    //set the new image's pixel
+                    enhancedBitmap.SetPixel(i, j, newColor);
+                }
+            }
+            /********************************** End of Defuzzification *********************************/
+
+            IntPtr hBitmap = enhancedBitmap.GetHbitmap();
+            BitmapImage enhancedBitmapImage = new BitmapImage();
+
+            try
+            {
+                BitmapSource enhancedBitmapSource = Imaging.CreateBitmapSourceFromHBitmap(
+                             hBitmap,
+                             IntPtr.Zero,
+                             Int32Rect.Empty,
+                             BitmapSizeOptions.FromEmptyOptions());
+
+                BmpBitmapEncoder encoder = new BmpBitmapEncoder();
+                MemoryStream memoryStream = new MemoryStream();
+
+                encoder.Frames.Add(BitmapFrame.Create(enhancedBitmapSource));
+                encoder.Save(memoryStream);
+
+                enhancedBitmapImage.BeginInit();
+                enhancedBitmapImage.StreamSource = new MemoryStream(memoryStream.ToArray());
+                enhancedBitmapImage.EndInit();
+
+                memoryStream.Close();
+            }
+            finally
+            {
+                DeleteObject(hBitmap);
+            }
+
+            return enhancedBitmapImage;
+        }
+
+        private BitmapImage GetGrayscaleImage(BitmapImage source, out Bitmap grayScaleBitmap)
         {
             Bitmap sourceBitmap = null;
             using (MemoryStream outStream = new MemoryStream())
@@ -64,8 +187,8 @@ namespace FuzzyContrastEnhancement
                     Color originalColor = sourceBitmap.GetPixel(i, j);
 
                     //create the grayscale version of the pixel
-                    int grayScale = (int)((originalColor.R * .3) + (originalColor.G * .59)
-                        + (originalColor.B * .11));
+                    int grayScale = (int)((originalColor.R * 0.299) + (originalColor.G * 0.587)
+                        + (originalColor.B * 0.114));
 
                     //create the color object
                     Color newColor = Color.FromArgb(grayScale, grayScale, grayScale);
@@ -74,6 +197,8 @@ namespace FuzzyContrastEnhancement
                     grayscaleBitmap.SetPixel(i, j, newColor);
                 }
             }
+
+            grayScaleBitmap = grayscaleBitmap;
 
             IntPtr hBitmap = grayscaleBitmap.GetHbitmap();
             BitmapImage grayScaleBitmapImage = new BitmapImage();
