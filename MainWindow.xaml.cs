@@ -44,10 +44,10 @@ namespace FuzzyContrastEnhancement
             BitmapImage grayBitmapImage = GetGrayscaleImage(sourceBitmapImage, out grayScaleBitmap);
             GrayImage.Source = grayBitmapImage;
 
-            EnhancedImage.Source = GetEnhancedImage(grayScaleBitmap);
+            EnhancedImage.Source = GetEnhancedImageByFuzzinessMinimization(grayScaleBitmap);
         }
 
-        private BitmapImage GetEnhancedImage(Bitmap grayscaleBitmap)
+        private BitmapImage GetEnhancedImageByFuzzinessMinimization(Bitmap grayscaleBitmap)
         {
             int max = int.MinValue, min = int.MaxValue;
             int width = grayscaleBitmap.Width, height = grayscaleBitmap.Height;
