@@ -1,0 +1,9 @@
+﻿<Window x:Class="FuzzyContrastEnhancement.ImageView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="ImageView" Height="169" Width="136" SizeToContent="WidthAndHeight">
+    <Grid>
+        <Image HorizontalAlignment="Left" Height="116" Margin="10,10,0,0" VerticalAlignment="Top" Width="109" Name="Image" ClipToBounds="True" Stretch="None"/>
+
+    </Grid>
+</Window>

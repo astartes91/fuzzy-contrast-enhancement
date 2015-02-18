@@ -40,6 +40,10 @@ namespace FuzzyContrastEnhancement
             BitmapImage sourceBitmapImage = new BitmapImage(new Uri(dialog.FileName));
             SourceImage.Source = sourceBitmapImage;
 
+            /*ImageView imageView = new ImageView();
+            imageView.Image.Source = sourceBitmapImage;
+            imageView.Show();*/
+
             Bitmap grayScaleBitmap = null;
             BitmapImage grayBitmapImage = GetGrayscaleImage(sourceBitmapImage, out grayScaleBitmap);
             GrayImage.Source = grayBitmapImage;
@@ -76,6 +80,7 @@ namespace FuzzyContrastEnhancement
             //double fuzzyDenominator = (max - crossover) / (Math.Pow(0.5, (1 / fuzzyExponent)));
             //double fuzzyDenominator = (max - crossover)/(Math.Pow(0.5, (-1/fuzzyExponent)) - 1);
             //double fuzzyDenominator = (max - crossover) / (Math.Exp(-1 * Math.Log(0.5) / fuzzyExponent) - 1);
+            double alpha = Math.Pow(1.0 + (max - min) / fuzzyDenominator, -fuzzyExponent);
 
             /********************************** Fuzzification **************************************/
             double[,] membershipValuesMatrix = new double[width, height];
@@ -112,6 +117,11 @@ namespace FuzzyContrastEnhancement
                     {
                         membershipValuesMatrix[i, j] = 1 - 2 * (Math.Pow(1 - membershipValuesMatrix[i, j], 2));
                     }
+
+                    if (membershipValuesMatrix[i, j] < alpha)
+                    {
+                        membershipValuesMatrix[i, j] = alpha;
+                    }
                 }
             }
             /************************************* End of Intensification ************************************/
@@ -129,7 +139,7 @@ namespace FuzzyContrastEnhancement
                     /*int color = (int)(fuzzyDenominator + max - (fuzzyDenominator * (Math.Pow(membershipValuesMatrix[i, j],
                         (-1 / fuzzyExponent)))));*/
 
-                    //if (color < 0) color *= -1;
+                    //if (color < 0) color = min;
 
                     Color newColor = Color.FromArgb(color, color, color);
 
